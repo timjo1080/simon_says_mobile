@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'game_s.dart';
 import 'difficulty_s.dart';
+import 'leaderboard_screen.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
@@ -58,7 +58,12 @@ class MainMenuScreen extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Leaderboard will be added later.
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LeaderboardScreen(),
+                      ),
+                    );
                   },
                   child: const Text('Leaderboard'),
                 ),

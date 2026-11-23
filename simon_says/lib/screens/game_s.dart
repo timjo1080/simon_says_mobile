@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/color_button.dart';
 import '../models/game_settings.dart';
+import 'game_over_screen.dart';
 
 class GameScreen extends StatefulWidget {
   final GameSettings settings;
@@ -160,39 +161,25 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void _endGame() {
+  Future<void> _endGame() async {
+    if (!mounted || _gameOver) return;
+
     _inputTimer?.cancel();
 
     setState(() {
       _gameOver = true;
     });
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Game Over'),
-          content: Text('Your score was $_score.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _startGame();
-              },
-              child: const Text('Play Again'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text('Main Menu'),
-            ),
-          ],
-        );
-      },
+    final playAgain = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => GameOverScreen(score: _score),
+      ),
     );
+
+    if (mounted && playAgain == true) {
+      _startGame();
+    }
   }
 
   void _startInputTimer() {
