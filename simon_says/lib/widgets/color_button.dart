@@ -17,10 +17,17 @@ class ColorButton extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 100),
       decoration: BoxDecoration(
-        color: isLit ? Colors.white : color,
+        color: isLit
+            ? (color == Colors.white ? Colors.grey : Colors.white)
+            : color,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          if (isLit) BoxShadow(color: color, blurRadius: 20, spreadRadius: 5),
+          if (isLit)
+            BoxShadow(
+              color: color == Colors.white ? Colors.grey : color,
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
         ],
       ),
       child: ElevatedButton(

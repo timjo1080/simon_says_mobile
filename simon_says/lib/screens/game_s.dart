@@ -1,11 +1,16 @@
 import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+//import 'package:audioplayers/audioplayers.dart';
 
 import '../widgets/color_button.dart';
+import '../models/game_settings.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final GameSettings settings;
+
+  const GameScreen({super.key, required this.settings});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -23,12 +28,24 @@ class _GameScreenState extends State<GameScreen> {
 
   final List<int> _sequence = [];
 
+  //final AudioPlayer _audioPlayer = AudioPlayer();
+
+  final List<String> _soundPaths = [
+    'sounds/red.wav',
+    'sounds/blue.wav',
+    'sounds/green.wav',
+    'sounds/yellow.wav',
+  ];
+
   int _playerIndex = 0;
   int _activeButton = -1;
   int _score = 0;
 
   bool _showingSequence = true;
   bool _gameOver = false;
+
+  Timer? _inputTimer;
+  int _remainingSeconds = 0;
 
   @override
   void initState() {
@@ -51,14 +68,20 @@ class _GameScreenState extends State<GameScreen> {
       _showingSequence = true;
     });
 
-    for (final buttonIndex in _sequence) {
+    final sequenceToShow = widget.settings.showOnlyNext
+        ? [_sequence.last]
+        : _sequence;
+
+    for (final buttonIndex in sequenceToShow) {
       if (!mounted) return;
 
       setState(() {
         _activeButton = buttonIndex;
       });
 
-      await Future.delayed(const Duration(milliseconds: 600));
+      //_playButtonSound(buttonIndex);
+
+      await Future.delayed(widget.settings.sequenceDelay);
 
       if (!mounted) return;
 
@@ -74,16 +97,38 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _showingSequence = false;
     });
+
+    _startInputTimer();
   }
 
   Future<void> _buttonPressed(int buttonIndex) async {
+    _inputTimer?.cancel();
+
     if (_showingSequence || _gameOver) {
       return;
+    }
+
+    if (_playerIndex == _sequence.length) {
+      setState(() {
+        _score += widget.settings.pointsPerCycle;
+        _playerIndex = 0;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+
+      _sequence.add(_random.nextInt(4));
+      _playSequence();
+    } else {
+      _startInputTimer();
     }
 
     setState(() {
       _activeButton = buttonIndex;
     });
+
+    //_playButtonSound(buttonIndex);
 
     await Future.delayed(const Duration(milliseconds: 150));
 
@@ -102,7 +147,7 @@ class _GameScreenState extends State<GameScreen> {
 
     if (_playerIndex == _sequence.length) {
       setState(() {
-        _score++;
+        _score += widget.settings.pointsPerCycle;
         _playerIndex = 0;
       });
 
@@ -116,6 +161,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _endGame() {
+    _inputTimer?.cancel();
+
     setState(() {
       _gameOver = true;
     });
@@ -147,6 +194,49 @@ class _GameScreenState extends State<GameScreen> {
       },
     );
   }
+
+  void _startInputTimer() {
+    _inputTimer?.cancel();
+
+    setState(() {
+      _remainingSeconds = widget.settings.inputTimeLimit;
+    });
+
+    _inputTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_remainingSeconds <= 1) {
+        timer.cancel();
+        _endGame();
+      } else {
+        setState(() {
+          _remainingSeconds--;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _inputTimer?.cancel();
+    //_timerController.dispose();
+    //_audioPlayer.dispose();
+    super.dispose();
+  }
+
+  /*
+  void _playButtonSound(int buttonIndex) {
+    if (widget.settings.removeSounds) {
+      return;
+    }
+
+    _audioPlayer.stop();
+    _audioPlayer.play(AssetSource(_soundPaths[buttonIndex]));
+  }
+  */
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +291,9 @@ class _GameScreenState extends State<GameScreen> {
                             mainAxisSpacing: 12,
                             children: List.generate(4, (index) {
                               return ColorButton(
-                                color: _colors[index],
+                                color: widget.settings.removeColors
+                                    ? Colors.white
+                                    : _colors[index],
                                 isLit: _activeButton == index,
                                 onPressed: () => _buttonPressed(index),
                               );
@@ -210,6 +302,45 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 20),
+
+                    if (!_showingSequence && !_gameOver) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.timer),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$_remainingSeconds seconds',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Time Bar
+                      SizedBox(
+                        width: double.infinity,
+                        child: LinearProgressIndicator(
+                          value:
+                              _remainingSeconds /
+                              widget.settings.inputTimeLimit,
+                          minHeight: 12,
+                          borderRadius: BorderRadius.circular(10),
+                          backgroundColor: Colors.grey.shade700,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _remainingSeconds <= 3
+                                ? Colors.red
+                                : Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
