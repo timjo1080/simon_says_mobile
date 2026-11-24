@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'difficulty_s.dart';
 import 'leaderboard_screen.dart';
+import 'multiplayer_s.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
@@ -45,7 +46,12 @@ class MainMenuScreen extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Multiplayer will be added later.
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MultiplayerScreen(),
+                      ),
+                    );
                   },
                   child: const Text('Multiplayer'),
                 ),
