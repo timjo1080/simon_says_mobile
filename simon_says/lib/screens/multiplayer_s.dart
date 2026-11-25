@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/color_button.dart';
+import 'game_over_screen.dart';
 
 enum MultiplayerPhase {
   handoff,
@@ -148,40 +149,24 @@ class _MultiplayerScreenState extends State<MultiplayerScreen> {
     _isAnimating = false;
   }
 
-  void _endGame() {
+  Future<void> _endGame() async {
     setState(() {
       _phase = MultiplayerPhase.gameOver;
     });
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Game Over'),
-          content: Text(
-            'Player $_currentPlayer made a mistake.\n'
-            'The sequence had ${_sequence.length} buttons.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _restartGame();
-              },
-              child: const Text('Play Again'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text('Main Menu'),
-            ),
-          ],
-        );
-      },
+    final playAgain = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => PopScope(
+          canPop: false,
+          child: GameOverScreen(score: _round, multiplayer: true),
+        ),
+      ),
     );
+
+    if (mounted && playAgain == true) {
+      _restartGame();
+    }
   }
 
   void _restartGame() {

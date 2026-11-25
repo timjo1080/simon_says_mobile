@@ -4,11 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 typedef HighScore = ({String username, int score});
 
 const highScoresStorageKey = 'simon_says.high_scores';
+const multiplayerHighScoresStorageKey = 'simon_says.multiplayer_high_scores';
 final highScoreUsernamePattern = RegExp(r'^[A-Z0-9]{3}$');
 
-List<HighScore> readHighScores(SharedPreferences preferences) {
+List<HighScore> readHighScores(
+  SharedPreferences preferences, {
+  String storageKey = highScoresStorageKey,
+}) {
   final scores = <HighScore>[];
-  for (final entry in preferences.getStringList(highScoresStorageKey) ?? []) {
+  for (final entry in preferences.getStringList(storageKey) ?? []) {
     final parts = entry.split(':');
     if (parts.length != 2 || !highScoreUsernamePattern.hasMatch(parts.first)) {
       continue;
@@ -93,25 +97,58 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  late final _scores = SharedPreferences.getInstance().then(readHighScores);
+  bool _multiplayer = false;
+  late final _scores = SharedPreferences.getInstance().then(
+    (preferences) => (
+      solo: readHighScores(preferences),
+      multiplayer: readHighScores(
+        preferences,
+        storageKey: multiplayerHighScoresStorageKey,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Leaderboard'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Leaderboard'),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: FutureBuilder<List<HighScore>>(
-                future: _scores,
-                builder: (context, snapshot) => HighScoresCard(
-                  scores: snapshot.data ?? const [],
-                  loading: snapshot.connectionState != ConnectionState.done,
-                  loadFailed: snapshot.hasError,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Solo')),
+                      ButtonSegment(value: true, label: Text('Multiplayer')),
+                    ],
+                    selected: {_multiplayer},
+                    onSelectionChanged: (selection) {
+                      setState(() => _multiplayer = selection.single);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  FutureBuilder(
+                    future: _scores,
+                    builder: (context, snapshot) {
+                      final scores = snapshot.data;
+                      final selectedScores =
+                          _multiplayer ? scores?.multiplayer : scores?.solo;
+                      return HighScoresCard(
+                        scores: selectedScores ?? const [],
+                        loading: snapshot.connectionState != ConnectionState.done,
+                        loadFailed: snapshot.hasError,
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),

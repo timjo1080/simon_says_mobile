@@ -5,9 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'leaderboard_screen.dart';
 
 class GameOverScreen extends StatefulWidget {
-  const GameOverScreen({super.key, required this.score});
+  const GameOverScreen({
+    super.key,
+    required this.score,
+    this.multiplayer = false,
+  });
 
   final int score;
+  final bool multiplayer;
 
   @override
   State<GameOverScreen> createState() => _GameOverScreenState();
@@ -20,6 +25,10 @@ class _GameOverScreenState extends State<GameOverScreen> {
   bool _loadFailed = false;
   bool _saving = false;
   bool _saved = false;
+
+  String get _storageKey => widget.multiplayer
+      ? multiplayerHighScoresStorageKey
+      : highScoresStorageKey;
 
   @override
   void initState() {
@@ -36,7 +45,7 @@ class _GameOverScreenState extends State<GameOverScreen> {
   Future<void> _loadScores() async {
     try {
       final preferences = await SharedPreferences.getInstance();
-      final scores = readHighScores(preferences);
+      final scores = readHighScores(preferences, storageKey: _storageKey);
       if (!mounted) return;
       setState(() {
         _preferences = preferences;
@@ -71,7 +80,7 @@ class _GameOverScreenState extends State<GameOverScreen> {
         if (topScores.length > 10) topScores.removeLast();
       }
       final saved = await preferences.setStringList(
-        highScoresStorageKey,
+        _storageKey,
         topScores.map((entry) => '${entry.username}:${entry.score}').toList(),
       );
       if (!saved) throw StateError('Could not write high scores');
